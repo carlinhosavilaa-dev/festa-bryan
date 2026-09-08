@@ -532,7 +532,7 @@
             <span class="card-tag">17 Anos</span>
             <h3>A Grande Chegada!</h3>
             <p>Chegou todo arrumadinho com gravatinha e um sorriso cativante, automaticamente virou atração da festa… O querido participou de tudo, foi jogado de um lado para o outro, ele brilhou até no teto da festa! (até hoje não sabemos aonde a gravata foi parar, talvez a gente nem queira saber)</p>
-            <img src="17%20anos.jpg" alt="17 anos">
+            <img src="17anos.jpg" alt="17 anos">
           </div>
         </div>
 
@@ -542,7 +542,7 @@
             <span class="card-tag">18 Anos</span>
             <h3>O Protagonista da Noite</h3>
             <p>Obviamente Bryan se fez presente, assistiu todos tomarem seu shot de entrada… e quando a festa acabou, cadê o Bryan? (Nosso protagonista curtiu tanto a noite que não voltou pra casa naquele dia, participou de outra festa que teve no local e só depois encontramos ele… safadinho né?)</p>
-            <img src="18%20anos.jpg" alt="18 anos">
+            <img src="18anos.jpg" alt="18 anos">
           </div>
         </div>
 
@@ -552,7 +552,7 @@
             <span class="card-tag">19 Anos</span>
             <h3>Tradição e Fama</h3>
             <p>Aqui ele já tinha virado tradição e conhecido, TODOS tiraram fotos com ele, inclusive nosso super patrão que estava muito feliz para recusar o registro desse momento, uma gracinha né?</p>
-            <img src="19%20anos.jpg" alt="19 anos">
+            <img src="19anos.jpg" alt="19 anos">
           </div>
         </div>
 
@@ -897,8 +897,8 @@
         const cards = document.querySelectorAll('.tilt-card');
         cards.forEach(card => {
           const rect = card.getBoundingClientRect();
-          cardX = e.clientX - rect.left;
-          cardY = e.clientY - rect.top;
+          const cardX = e.clientX - rect.left;
+          const cardY = e.clientY - rect.top;
 
           if (cardX >= -20 && cardX <= rect.width + 20 && cardY >= -20 && cardY <= rect.height + 20) {
             const centerX = rect.width / 2;
