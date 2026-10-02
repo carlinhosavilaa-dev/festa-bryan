@@ -862,11 +862,13 @@
       deletePhoto(current.id, current.uploaderId);
     }
 
-    // DOWNLOAD DIRETO VIA BLOB (SEM PÁGINA EM BRANCO)
-    window.downloadSinglePhoto = function(url, name) {
+  // DOWNLOAD NATIVO OTIMIZADO (COMPATÍVEL COM IPHONE E ANDROID)
+    window.downloadSinglePhoto = async function(url, name) {
       const cleanName = name.replace(/[^a-zA-Z0-9]/g, "_");
+      const fileName = `Foto_Bryan_${cleanName}.jpg`;
 
       try {
+        // Converte o texto da imagem em um Arquivo real
         const parts = url.split(';base64,');
         const contentType = parts[0].split(':')[1] || 'image/jpeg';
         const raw = window.atob(parts[1]);
@@ -877,18 +879,29 @@
         }
 
         const blob = new Blob([uInt8Array], { type: contentType });
-        const blobUrl = URL.createObjectURL(blob);
+        const file = new File([blob], fileName, { type: contentType });
 
+        // Tenta usar o menu nativo do Celular (Salvar Imagem, WhatsApp, etc)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Foto da Festa do Bryan'
+          });
+          return; // Para a execução aqui se o menu abriu com sucesso
+        }
+
+        // Fallback para PC (faz o download direto invisível)
+        const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = blobUrl;
-        a.download = `Foto_Bryan_${cleanName}.jpg`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
 
         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       } catch (e) {
-        alert("Não foi possível baixar a imagem diretamente.");
+        console.log("Download cancelado ou indisponível:", e);
       }
     };
 
