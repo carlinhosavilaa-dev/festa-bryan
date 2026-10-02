@@ -457,6 +457,12 @@
     }
 
     footer { text-align: center; margin-top: 40px; color: #926d80; font-size: 0.82rem; }
+
+    @keyframes piscar {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(1.05); }
+      100% { opacity: 1; transform: scale(1); }
+    }
   </style>
 </head>
 <body>
@@ -592,24 +598,14 @@
 
     </div>
 
-   <footer>
-  <p>Feito com amor para a Gabizinha e Bryan!</p>
-  <p>Acesse nosso patrocinador master:</p>
-  <p>
-    <a href="https://www.modelovip.com.br" target="_blank" style="color: #ff4d8d; font-weight: 800; text-decoration: none; animation: piscar 1s infinite; display: inline-block;">
-      www.modelovip.com.br
-    </a>
-  </p>
-
-  <style>
-    @keyframes piscar {
-      0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.3; transform: scale(1.05); }
-      100% { opacity: 1; transform: scale(1); }
-    }
-  </style>
-</footer>
-      
+    <footer>
+      <p>Feito com amor para a Gabizinha e Bryan!</p>
+      <p>Acesse nosso patrocinador master:</p>
+      <p>
+        <a href="https://www.modelovip.com.br" target="_blank" style="color: #ff4d8d; font-weight: 800; text-decoration: none; animation: piscar 1s infinite; display: inline-block;">
+          www.modelovip.com.br
+        </a>
+      </p>
     </footer>
 
   </div>
@@ -623,7 +619,7 @@
   <script>
     const ADMIN_PIN = "2020";
 
-    // IDENTIFICADOR ÚNICO DO DISPOSITIVO (Para saber quem subiu qual foto)
+    // Identificador do dispositivo para controle de autoria
     let myDeviceId = localStorage.getItem("bryan_device_id");
     if (!myDeviceId) {
       myDeviceId = "dev_" + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
@@ -849,63 +845,38 @@
       deletePhoto(current.id, current.uploaderId);
     }
 
-   window.downloadSinglePhoto = function(url, name) {
-  const cleanName = name.replace(/[^a-zA-Z0-9]/g, "_");
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    // DOWNLOAD DIRETO VIA BLOB (SEM PÁGINA EM BRANCO)
+    window.downloadSinglePhoto = function(url, name) {
+      const cleanName = name.replace(/[^a-zA-Z0-9]/g, "_");
 
-  // Se for celular (iOS ou Android), abre a imagem em uma tela própria para o usuário salvar
-  if (isMobile) {
-    const win = window.open();
-    if (win) {
-      win.document.write(`
-        <html>
-          <head><title>Salvar Foto</title></head>
-          <body style="margin:0; background:#120610; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; text-align:center; padding:20px;">
-            <p style="margin-bottom:15px; font-size:1.1rem; color:#ff85b3; font-weight:bold;">Pressione e segure a imagem para salvar na sua galeria 📸</p>
-            <img src="${url}" style="max-width:100%; max-height:80vh; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);" />
-          </body>
-        </html>
-      `);
-    } else {
-      window.location.href = url;
-    }
-    return;
-  }
+      try {
+        const parts = url.split(';base64,');
+        const contentType = parts[0].split(':')[1] || 'image/jpeg';
+        const raw = window.atob(parts[1]);
+        const uInt8Array = new Uint8Array(raw.length);
 
-  // Se for Computador, realiza o download automático via Blob
-  try {
-    const arr = url.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    const blob = new Blob([u8arr], { type: mime });
-    const blobUrl = URL.createObjectURL(blob);
+        for (let i = 0; i < raw.length; i++) {
+          uInt8Array[i] = raw.charCodeAt(i);
+        }
 
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = `Foto_Bryan_Festa_${cleanName}.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+        const blob = new Blob([uInt8Array], { type: contentType });
+        const blobUrl = URL.createObjectURL(blob);
 
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-  } catch (e) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Foto_Bryan_Festa_${cleanName}.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-};
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `Foto_Bryan_${cleanName}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-    // LÓGICA DE EXCLUSÃO INTELIGENTE
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      } catch (e) {
+        alert("Não foi possível baixar a imagem diretamente.");
+      }
+    };
+
+    // EXCLUSÃO INTELIGENTE: AUTOR OU SENHA DO HOST
     window.deletePhoto = async function(docId, uploaderId) {
-      // 1. Se a foto foi enviada por este próprio celular:
       if (uploaderId && uploaderId === myDeviceId) {
         if (confirm("Deseja apagar a sua foto do mural?")) {
           try {
@@ -918,7 +889,6 @@
         return;
       }
 
-      // 2. Se a foto é de outra pessoa, exige a senha do Host:
       const pinInput = prompt("🔒 Esta foto foi enviada por outra pessoa.\nDigite a senha do Host para apagar:");
       if (pinInput === null) return;
 
