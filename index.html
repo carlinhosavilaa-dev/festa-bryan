@@ -665,7 +665,7 @@
       }
     }
 
-    // COMPRESSÃO OTIMIZADA PARA ALTA QUALIDADE
+    // COMPRESSÃO OTIMIZADA PARA ALTA QUALIDADE (1400px / 85% JPEG)
     function compressPhoto(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -696,7 +696,6 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
             
-            // Qualidade aumentada para 85%
             resolve(canvas.toDataURL('image/jpeg', 0.85));
           };
           img.onerror = reject;
@@ -862,35 +861,28 @@
       deletePhoto(current.id, current.uploaderId);
     }
 
-  // DOWNLOAD NATIVO OTIMIZADO (COMPATÍVEL COM IPHONE E ANDROID)
+    // DOWNLOAD COMPATÍVEL COM TODOS OS DISPOSITIVOS (IOS, ANDROID E PC)
     window.downloadSinglePhoto = async function(url, name) {
       const cleanName = name.replace(/[^a-zA-Z0-9]/g, "_");
       const fileName = `Foto_Bryan_${cleanName}.jpg`;
 
       try {
-        // Converte o texto da imagem em um Arquivo real
-        const parts = url.split(';base64,');
-        const contentType = parts[0].split(':')[1] || 'image/jpeg';
-        const raw = window.atob(parts[1]);
-        const uInt8Array = new Uint8Array(raw.length);
+        const res = await fetch(url);
+        const blob = await res.blob();
 
-        for (let i = 0; i < raw.length; i++) {
-          uInt8Array[i] = raw.charCodeAt(i);
+        // 1. No Telemóvel/Celular: Abre o menu nativo (Salvar na Galeria, WhatsApp, etc.)
+        if (navigator.share) {
+          const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Foto do Bryan'
+            });
+            return;
+          }
         }
 
-        const blob = new Blob([uInt8Array], { type: contentType });
-        const file = new File([blob], fileName, { type: contentType });
-
-        // Tenta usar o menu nativo do Celular (Salvar Imagem, WhatsApp, etc)
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'Foto da Festa do Bryan'
-          });
-          return; // Para a execução aqui se o menu abriu com sucesso
-        }
-
-        // Fallback para PC (faz o download direto invisível)
+        // 2. No Computador: Faz o download direto do arquivo
         const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = blobUrl;
@@ -898,10 +890,17 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
 
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-      } catch (e) {
-        console.log("Download cancelado ou indisponível:", e);
+      } catch (err) {
+        // Fallback de segurança se o navegador restringir ações
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
     };
 
