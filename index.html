@@ -475,7 +475,7 @@
         <button class="tab-btn active" id="btnBryan" onclick="switchTab('bryan')">🧸 História do Bryan</button>
         <button class="tab-btn" id="btnFesta" onclick="switchTab('festa')">🎉 Mural da Festa</button>
       </div>
-      <button class="btn-tv-mode" onclick="openFullscreenPresentation()">🖥️ Modo TV / Tela Cheia</button>
+      <button class="btn-tv-mode" onclick="openFullscreenPresentation()">🖥 Modo TV / Tela Cheia</button>
     </div>
 
     <!-- ABA 1: BRYAN -->
@@ -605,6 +605,15 @@
   </div>
 
   <script>
+    const ADMIN_PIN = "2020";
+
+    // IDENTIFICADOR ÚNICO DO DISPOSITIVO (Para saber quem subiu qual foto)
+    let myDeviceId = localStorage.getItem("bryan_device_id");
+    if (!myDeviceId) {
+      myDeviceId = "dev_" + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+      localStorage.setItem("bryan_device_id", myDeviceId);
+    }
+
     const firebaseConfig = {
       apiKey: "AIzaSyAxgQXDO9Fz8JTw9gGKhLiF1nElO17AeGk",
       authDomain: "quem-e-bryan.firebaseapp.com",
@@ -690,6 +699,7 @@
           name: name,
           url: base64,
           category: 'bryan',
+          uploaderId: myDeviceId,
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         document.getElementById('formBryan').reset();
@@ -718,6 +728,7 @@
           name: name,
           url: base64,
           category: 'festa',
+          uploaderId: myDeviceId,
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         document.getElementById('formFesta').reset();
@@ -760,7 +771,7 @@
               </div>
               <div class="action-btns">
                 <button class="btn-action btn-dl" onclick="downloadSinglePhoto('${data.url}', '${data.name}')">📥 Baixar</button>
-                <button class="btn-action btn-del" onclick="deletePhoto('${data.id}')">🗑️ Apagar</button>
+                <button class="btn-action btn-del" onclick="deletePhoto('${data.id}', '${data.uploaderId || ''}')">🗑️ Apagar</button>
               </div>
             `;
             festaGrid.appendChild(card);
@@ -819,7 +830,7 @@
     function deleteCurrentBryanSlide() {
       if (bryanPhotos.length === 0) return;
       const current = bryanPhotos[currentBryanIndex];
-      deletePhoto(current.id);
+      deletePhoto(current.id, current.uploaderId);
     }
 
     window.downloadSinglePhoto = function(url, name) {
@@ -832,14 +843,36 @@
       document.body.removeChild(a);
     };
 
-    window.deletePhoto = async function(docId) {
-      if (confirm("Tem certeza de que deseja apagar esta foto do mural?")) {
-        try {
-          await db.collection("mural").doc(docId).delete();
-          alert("Foto removida com sucesso!");
-        } catch(err) {
-          alert("Erro ao apagar foto: " + err.message);
+    // LÓGICA DE EXCLUSÃO INTELIGENTE
+    window.deletePhoto = async function(docId, uploaderId) {
+      // 1. Se a foto foi enviada por este próprio celular:
+      if (uploaderId && uploaderId === myDeviceId) {
+        if (confirm("Deseja apagar a sua foto do mural?")) {
+          try {
+            await db.collection("mural").doc(docId).delete();
+            alert("Sua foto foi removida!");
+          } catch(err) {
+            alert("Erro ao apagar foto: " + err.message);
+          }
         }
+        return;
+      }
+
+      // 2. Se a foto é de outra pessoa, exige a senha do Host:
+      const pinInput = prompt("🔒 Esta foto foi enviada por outra pessoa.\nDigite a senha do Host para apagar:");
+      if (pinInput === null) return;
+
+      if (pinInput === ADMIN_PIN) {
+        if (confirm("Tem certeza de que deseja apagar esta foto como Host?")) {
+          try {
+            await db.collection("mural").doc(docId).delete();
+            alert("Foto removida pelo Host com sucesso!");
+          } catch(err) {
+            alert("Erro ao apagar foto: " + err.message);
+          }
+        }
+      } else {
+        alert("❌ Senha incorreta! Você só pode apagar fotos enviadas pelo seu celular.");
       }
     };
 
